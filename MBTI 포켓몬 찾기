@@ -1,0 +1,338 @@
+import streamlit as st
+
+st.set_page_config(
+    page_title="MBTI로 단짝 포켓몬 찾기 ⚡",
+    page_icon="⚡",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
+
+st.markdown("""
+<style>
+    /* 전체 배경을 따뜻한 크림/노란색 톤으로 변경 */
+    .stApp {
+        background-color: #FFFDF0;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    /* 메인 타이틀 스타일 */
+    .main-title {
+        text-align: center;
+        color: #222222;
+        font-size: 2.3rem;
+        font-weight: 900;
+        margin-bottom: 8px;
+        word-break: keep-all;
+    }
+    
+    /* 서브 타이틀 배지 */
+    .sub-badge {
+        text-align: center;
+        background-color: #FFC700;
+        color: #111111;
+        font-weight: 800;
+        font-size: 1rem;
+        padding: 8px 16px;
+        border-radius: 20px;
+        width: fit-content;
+        margin: 0 auto 24px auto;
+        box-shadow: 2px 2px 0px #332A15;
+    }
+
+    /* 노란색 메인 카드 용지 */
+    .notebook-card {
+        background-color: #FFE542;
+        border: 3px solid #332A15;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+
+    /* 포켓몬 결과 팝업 카드 */
+    .result-card {
+        background-color: #FFFFFF;
+        border: 3px solid #332A15;
+        border-radius: 18px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 4px 6px 0px rgba(0, 0, 0, 0.12);
+        margin-top: 10px;
+    }
+
+    /* MBTI 정보 박스 */
+    .mbti-badge {
+        display: inline-block;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #007AFF;
+        background-color: #EBF5FF;
+        padding: 6px 16px;
+        border-radius: 12px;
+        border: 2px solid #007AFF;
+        margin-bottom: 12px;
+    }
+
+    /* 어울리는 이유 메모지 */
+    .reason-box {
+        background-color: #FFFDF5;
+        border: 2.5px solid #332A15;
+        border-radius: 14px;
+        padding: 18px;
+        margin-top: 16px;
+        text-align: left;
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: #222222;
+        box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 버튼 태그 커스텀 */
+    div.stButton > button {
+        width: 100%;
+        background-color: #FFFFFF !important;
+        color: #222222 !important;
+        font-weight: 800 !important;
+        font-size: 1.1rem !important;
+        border: 2.5px solid #332A15 !important;
+        border-radius: 12px !important;
+        padding: 12px 0px !important;
+        box-shadow: 3px 3px 0px #332A15 !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 4px 5px 0px #332A15 !important;
+        background-color: #FFF3CC !important;
+    }
+
+    /* 다시 고르기 버튼 특별 스타일 */
+    .retry-btn div.stButton > button {
+        background: linear-gradient(135deg, #FF5252, #FF1744) !important;
+        color: #FFFFFF !important;
+        border-radius: 30px !important;
+        font-size: 1.2rem !important;
+        padding: 12px 24px !important;
+    }
+    
+    .retry-btn div.stButton > button:hover {
+        background: linear-gradient(135deg, #FF1744, #D50000) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+POKEMON_DATA = {
+    "ISTJ": {
+        "id": 9,
+        "ko_name": "거북왕",
+        "en_name": "Blastoise",
+        "types": "물 🌊",
+        "traits": "신중함, 견고함, 철저한 책임감",
+        "reason": "어떤 시련이 와도 묵묵히 자리를 지키는 단단한 등껍질 같은 존재입니다. 철저한 계획성과 신중함으로 주변 사람들에게 깊은 신뢰감을 주는 든든한 조력자예요!",
+        "match": "ESFP (푸린 🎤)"
+    },
+    "ISFJ": {
+        "id": 113,
+        "ko_name": "럭키",
+        "en_name": "Chansey",
+        "types": "노말 🩺",
+        "traits": "온화함, 헌신적, 세심한 배려",
+        "reason": "따뜻하고 헌신적인 성품으로 주변을 살뜰히 챙깁니다. 상대방의 작은 변화도 금방 알아차리고 따뜻한 마음으로 마음을 치유해 주는 천사 같은 단짝입니다!",
+        "match": "ESTP (라이츄 ⚡)"
+    },
+    "INFJ": {
+        "id": 282,
+        "ko_name": "가디안",
+        "en_name": "Gardevoir",
+        "types": "에스퍼 / 페어리 ✨",
+        "traits": "깊은 통찰력, 신비로움, 숭고한 소신",
+        "reason": "깊은 통찰력과 따뜻한 공감 능력을 겸비하고 있습니다. 자신이 소중하게 여기는 사람이나 이상을 위해서라면 어떤 위험도 무릅쓰고 끝까지 지켜내는 성품입니다.",
+        "match": "ENFP (피카츄 ⚡)"
+    },
+    "INTJ": {
+        "id": 150,
+        "ko_name": "뮤츠",
+        "en_name": "Mewtwo",
+        "types": "에스퍼 🔮",
+        "traits": "냉철한 전략가, 독창적, 사물의 본질 파악",
+        "reason": "독창적이고 뛰어난 분석력으로 본인만의 길을 개척하는 전략가입니다. 명확한 비전과 지혜로 복잡한 문제도 단번에 해결해내는 압도적 지능을 가지고 있습니다!",
+        "match": "ENTP (팬텀 👻)"
+    },
+    "ISTP": {
+        "id": 4,
+        "ko_name": "파이리",
+        "en_name": "Charmander",
+        "types": "불꽃 🔥",
+        "traits": "조용한 집중력, 순발력, 뛰어난 상황 분석",
+        "reason": "평소에는 느긋해 보이지만 필요한 순간 엄청난 집중력과 순발력을 발휘합니다. 상황을 냉철하게 분석해 깔끔하고 효율적으로 해결하는 능력이 탁월합니다.",
+        "match": "ESFJ (치코리타 🍃)"
+    },
+    "ISFP": {
+        "id": 132,
+        "ko_name": "메타몽",
+        "en_name": "Ditto",
+        "types": "노말 🎨",
+        "traits": "유연함, 포용력, 예술적 감성",
+        "reason": "어디서나 유연하게 적응하며 상대를 포용하는 따뜻한 마음을 가졌습니다. 자신만의 자유로운 라이프스타일과 부드러운 감성을 소중히 여깁니다.",
+        "match": "ENTJ (자시안 ⚔️)"
+    },
+    "INFP": {
+        "id": 133,
+        "ko_name": "이브이",
+        "en_name": "Eevee",
+        "types": "노말 🦊",
+        "traits": "무한한 가능성, 풍부한 감수성, 순수한 이상",
+        "reason": "풍부한 감수성과 무한한 가능성을 품고 있습니다. 따뜻한 마음씨와 열린 상상력으로 어떤 모습으로든 멋지게 성장할 수 있는 보석 같은 존재입니다.",
+        "match": "ENFJ (망나뇽 🐉)"
+    },
+    "INTP": {
+        "id": 143,
+        "ko_name": "잠만보",
+        "en_name": "Snorlax",
+        "types": "노말 😴",
+        "traits": "빠른 두뇌 회전, 호기심, 평정심 유지",
+        "reason": "느긋해 보이지만 두뇌 회전이 매우 빠르고 지적 호기심이 넘칩니다. 관심 분야에 몰입하면 엄청난 깊이의 탐구력을 발휘하는 매력적인 존재입니다.",
+        "match": "ENTJ (자시안 ⚔️)"
+    },
+    "ESTP": {
+        "id": 26,
+        "ko_name": "라이츄",
+        "en_name": "Raichu",
+        "types": "전기 ⚡",
+        "traits": "에너지 폭발, 모험가, 즉각적 해결력",
+        "reason": "에너지가 넘치고 모험을 두려워하지 않는 정면돌파형 행동파입니다! 어떤 문제도 위축되지 않고 시원시원하게 대처하는 화끈한 능력을 갖췄습니다.",
+        "match": "ISFJ (럭키 💖)"
+    },
+    "ESFP": {
+        "id": 39,
+        "ko_name": "푸린",
+        "en_name": "Jigglypuff",
+        "types": "노말 / 페어리 🎤",
+        "traits": "분위기 메이커, 사랑스러움, 친화력",
+        "reason": "어디서나 밝은 스포트라이트를 받는 분위기 메이커입니다! 넘치는 흥과 친화력으로 사람들을 미소 짓게 만드는 사랑스러운 긍정 에너지를 가졌습니다.",
+        "match": "ISTJ (거북왕 🐢)"
+    },
+    "ENFP": {
+        "id": 25,
+        "ko_name": "피카츄",
+        "en_name": "Pikachu",
+        "types": "전기 ⚡",
+        "traits": "스파크 긍정 에너지, 열정, 분위기 리더",
+        "reason": "톡톡 튀는 아이디어와 통발 같은 에너지를 지닌 인싸 포켓몬입니다! 누구와도 금방 친해지며 세상을 환하게 밝히는 해피 바이러스 역할을 합니다.",
+        "match": "INFJ (가디안 🔮)"
+    },
+    "ENTP": {
+        "id": 94,
+        "ko_name": "팬텀",
+        "en_name": "Gengar",
+        "types": "고스트 / 독 👻",
+        "traits": "재치발랄, 독창적 고정관념 파괴자, 입담가",
+        "reason": "유쾌한 재치와 독창적인 시각으로 지루할 틈이 없는 일상을 만듭니다. 고정관념을 깨는 상상력과 흥미진진한 지적 입담이 일품입니다!",
+        "match": "INTJ (뮤츠 🧬)"
+    },
+    "ESTJ": {
+        "id": 59,
+        "ko_name": "윈디",
+        "en_name": "Arcanine",
+        "types": "불꽃 🔥",
+        "traits": "당당한 리더십, 강한 추진력, 확실한 일처리",
+        "reason": "체계적이고 당당한 리더십으로 무리를 이끕니다. 강한 책임감과 직진하는 목표 의식으로 한 번 정한 목표는 흔들림 없이 성취해냅니다.",
+        "match": "INTP (잠만보 😴)"
+    },
+    "ESFJ": {
+        "id": 152,
+        "ko_name": "치코리타",
+        "en_name": "Chikorita",
+        "types": "풀 🍃",
+        "traits": "사교성, 따뜻한 배려, 화기애애함",
+        "reason": "따뜻한 사교성과 타인에 대한 애정으로 주변을 보듬습니다. 함께하는 공간을 언제나 화기애애하게 만들며 마음 편안해지는 힐링을 선사합니다.",
+        "match": "ISTP (파이리 🔥)"
+    },
+    "ENFJ": {
+        "id": 149,
+        "ko_name": "망나뇽",
+        "en_name": "Dragonite",
+        "types": "드래곤 / 비행 🐉",
+        "traits": "포용력, 카리스마와 친절함, 올바른 이끎",
+        "reason": "크고 따뜻한 마음으로 주변을 감싸주는 든든한 리더입니다. 카리스마와 친절함을 동시에 발휘하여 함께하는 이들을 항상 좋은 길로 이끌어 줍니다.",
+        "match": "INFP (이브이 🦊)"
+    },
+    "ENTJ": {
+        "id": 888,
+        "ko_name": "자시안",
+        "en_name": "Zacian",
+        "types": "페어리 / 강철 ⚔️",
+        "traits": "단호한 결단력, 승부사, 높은 목표 의식",
+        "reason": "결단력과 명확한 목표 의식을 지닌 당당한 개척자입니다. 지치지 않는 승부욕과 효율적인 전략으로 승리를 향해 확신 있게 나아갑니다.",
+        "match": "INTP (잠만보 😴)"
+    }
+}
+
+if "selected_mbti" not in st.session_state:
+    st.session_state.selected_mbti = None
+
+st.markdown('<div class="main-title">MBTI로 단짝 포켓몬 찾기 ⚡</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-badge">자신의 MBTI를 누르면 어울리는 포켓몬이 등장해요!</div>', unsafe_allow_html=True)
+
+if st.session_state.selected_mbti is None:
+    st.markdown('<div class="notebook-card">', unsafe_allow_html=True)
+    
+    mbti_list = list(POKEMON_DATA.keys())
+    
+    # 4 columns for 16 MBTI buttons grid
+    cols = st.columns(4)
+    for index, mbti in enumerate(mbti_list):
+        col = cols[index % 4]
+        if col.button(mbti, key=mbti):
+            st.session_state.selected_mbti = mbti
+            # Trigger celebration effect
+            st.balloons()
+            st.rerun()
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    selected = st.session_state.selected_mbti
+    data = POKEMON_DATA[selected]
+    
+    # High quality official artwork URL from CDN
+    image_url = f"https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/{data['id']}.png"
+
+    st.markdown('<div class="result-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="mbti-badge">[ {selected} 유형 ]</div>', unsafe_allow_html=True)
+    
+    # Display Pokemon Image
+    st.image(image_url, width=230)
+    
+    # Pokemon Name & Types
+    st.markdown(f"<h1 style='color: #111; margin-bottom: 2px;'>{data['ko_name']} <span style='font-size:1.2rem; color:#666;'>({data['en_name']})</span></h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size: 1.1rem; font-weight: 800; color: #E65100; margin-bottom: 8px;'>속성: {data['types']}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size: 1.0rem; color: #555; font-weight: 700;'>✨ 주요 특징: {data['traits']}</p>", unsafe_allow_html=True)
+    
+    # Reason Box
+    st.markdown(f"""
+    <div class="reason-box">
+        <strong>💡 {selected} 유형과 어울리는 이유</strong><br><br>
+        {data['reason']}
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Match Badge
+    st.markdown(f"""
+    <div style="margin-top: 16px; padding: 12px; background-color: #FFF0F5; border: 2px solid #FFB6C1; border-radius: 12px; text-align: center;">
+        <span style="font-size: 1.3rem;">💖</span> <strong>최고의 찰떡 궁합 MBTI:</strong> <span style="color: #D81B60; font-weight: 800;">{data['match']}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.write("")
+    # Reset button
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+    with col_center:
+        st.markdown('<div class="retry-btn">', unsafe_allow_html=True)
+        if st.button("🔄 다시 고르기", key="reset"):
+            st.session_state.selected_mbti = None
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
